@@ -1,3 +1,3 @@
 ﻿using Advent24;
 
-new Day3().Go();
+new Day4().Go();
