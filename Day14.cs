@@ -1,4 +1,6 @@
-﻿namespace Advent24;
+﻿using System.Collections.Generic;
+
+namespace Advent24;
 
 internal class Day14
 {
@@ -6,31 +8,113 @@ internal class Day14
     public void Go()
     {
         var input = File.ReadAllLines("input/day14.txt");
-        Console.WriteLine($"result: {Robots(input)}"); //
+        //Console.WriteLine($"result: {Robots(input, 103, 101)}");
+        Console.WriteLine($"result: {Robots2(input, 103, 101)}"); //7861
     }
 
-    private long Robots(string[] input)
+    private long Robots(string[] input, int n, int m)
     {
-        int n = 7;
-        int m = 11;
         var list = ProcessInput(input);
 
         Show(n, m, list);
         var result = 0;
-        foreach (var item in list)
+
+        for (int i = 0; i < list.Count; i++)
         {
-            for (int i = 0; i < 100; i++)
-            {
-                var (x, y) = (item.x + item.vx * i, item.y + item.vy * i);
-            }
+            var item = list[i];
+            var (r, c) = (item.Row, item.Col);
+            (r, c) = (r + item.VR * 100, c + item.VC * 100);
+            if (r < 0)
+                r = n + r % n;
+            r = r % n;
+
+            if (c < 0)
+                c = m + c % m;
+            c = c % m;
+
+            list[i] = list[i] with { Row = r, Col = c };
         }
-        return result;
+
+        var mr = n / 2;
+        var mc = m / 2;
+
+        int[] q = new int[4];
+        foreach (var r in list)
+        {
+            if (r.Row < mr && r.Col < mc) q[0] += 1;
+            if (r.Row > mr && r.Col > mc) q[2] += 1;
+            if (r.Row > mr && r.Col < mc) q[1] += 1;
+            if (r.Row < mr && r.Col > mc) q[3] += 1;
+        }
+
+        Console.WriteLine();
+        Show(n, m, list);
+        return q[0] * q[1] * q[2] * q[3];
     }
 
-    private void Show(int n, int m, List<(long x, long y, long vx, long vy)> robots)
+    private long Robots2(string[] input, int n, int m)
     {
-        var rmap = robots.Select(x => (x.x, x.y))
-            .GroupBy(p => p).Select(x => new { Key = x.Key, Count = x.Count()})
+        var list = ProcessInput(input);
+
+        //Show(n, m, list);
+        var result = 0;
+
+        //for (int s = 0; s < 10000; s++)
+        int s = 0;
+        while (true)
+        {
+            for (int i = 0; i < list.Count; i++)
+            {
+                var item = list[i];
+                var (r, c) = (item.Row, item.Col);
+                (r, c) = (r + item.VR, c + item.VC);
+                if (r < 0)
+                    r = n + r % n;
+                r = r % n;
+
+                if (c < 0)
+                    c = m + c % m;
+                c = c % m;
+
+                list[i] = list[i] with { Row = r, Col = c };
+            }
+
+
+            s++;
+            if (s % 100 == 0)
+            {
+                Console.WriteLine(s);
+            }
+            if (IsTree(list))
+            {
+                Console.WriteLine($"Tree found at step {s}");
+                break;
+            }
+        }
+        Show(n, m, list);
+        Console.ReadKey();
+
+        return s;
+    }
+
+    private bool IsTree(List<Robo> robots)
+    {
+        var a = robots.GroupBy(x => x.Col)
+            .Select(x => new { Key = x.Key, Count = x.Count() })
+            .Where(x => x.Count > 20)
+            .Any();
+
+        var b = robots.GroupBy(x => x.Row)
+            .Select(x => new { Key = x.Key, Count = x.Count() })
+            .Where(x => x.Count > 20)
+            .Any();
+
+        return a && b;
+    }
+    private void Show(int n, int m, List<Robo> robots)
+    {
+        var rmap = robots.Select(x => (x.Row, x.Col))
+            .GroupBy(p => p).Select(x => new { Key = x.Key, Count = x.Count() })
             .ToList();
 
         for (int i = 0; i < n; i++)
@@ -51,9 +135,9 @@ internal class Day14
         }
     }
 
-    private List<(long x, long y, long vx, long vy)> ProcessInput(string[] input)
+    private List<Robo> ProcessInput(string[] input)
     {
-        List<(long x, long y, long vx, long vy)> res = new();
+        List<Robo> res = new();
         for (int i = 0; i < input.Length; i++)
         {
             // p=10,3 v=-1,2
@@ -61,15 +145,17 @@ internal class Day14
                 .Replace("v=", "")
                 .Replace(",", " ")
                 .Split(' ');
-            var x = long.Parse(parts[0]);
-            var y = long.Parse(parts[1]);
-            var vx = long.Parse(parts[2]);
-            var vy = long.Parse(parts[3]);
-            res.Add((x, y, vx, vy));
+            var col = long.Parse(parts[0]);
+            var row = long.Parse(parts[1]);
+            var vc = long.Parse(parts[2]);
+            var vr = long.Parse(parts[3]);
+            res.Add(new Robo(row, col, vr, vc));
         }
         return res;
     }
 
     int At(int i, int j, int n, int m)
         => i < 0 || i >= n || j < 0 || j >= m ? -1 : 0;
+
+    record Robo(long Row, long Col, long VR, long VC);
 }
